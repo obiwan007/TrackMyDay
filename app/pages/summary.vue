@@ -21,6 +21,38 @@ interface WeekBucket {
 
 const weeks = ref<WeekBucket[]>([]);
 const total = ref<number>(0);
+// map of day -> boolean has work (filled after load)
+const dayActivity = ref<Record<string, { entries: number; hours: number }>>({});
+
+const calendarWeeks = computed(() => {
+	// produce a matrix of weeks, each week is an array of day objects { date, inMonth }
+	const ym = month.value;
+	if (!/^\d{4}-\d{2}$/.test(ym)) return [];
+	const [y, mStr] = ym.split('-');
+	const m = Number(mStr) - 1; // JS month index
+	const first = new Date(Number(y), m, 1);
+	const last = new Date(Number(y), m + 1, 0);
+	// start from Monday of the week containing first day
+	const start = new Date(first);
+	const startDow = (start.getDay() + 6) % 7; // 0=Mon
+	start.setDate(start.getDate() - startDow);
+	// end at Sunday of week containing last day
+	const end = new Date(last);
+	const endDow = (end.getDay() + 6) % 7; // 0=Mon
+	end.setDate(end.getDate() + (6 - endDow));
+	const weeks: Array<Array<{ date: string; inMonth: boolean }>> = [];
+	const cursor = new Date(start);
+	while (cursor <= end) {
+		const week: Array<{ date: string; inMonth: boolean }> = [];
+		for (let i = 0; i < 7; i++) {
+			const iso = cursor.toISOString().slice(0, 10);
+			week.push({ date: iso, inMonth: cursor.getMonth() === m });
+			cursor.setDate(cursor.getDate() + 1);
+		}
+		weeks.push(week);
+	}
+	return weeks;
+});
 
 function startOfMonth(ym: string) {
 	return ym + '-01';
@@ -77,6 +109,12 @@ async function load() {
 		.sort((a, b) => a.from.localeCompare(b.from));
 	weeks.value = buckets;
 	total.value = buckets.reduce((s, b) => s + b.hours, 0);
+	// build day activity map for calendar
+	const act: Record<string, { entries: number; hours: number }> = {};
+	for (const d of summary.days) {
+		act[d.date] = { entries: d.entries, hours: d.totalHours };
+	}
+	dayActivity.value = act;
 }
 
 watch(month, () => {
@@ -156,6 +194,40 @@ onMounted(() => {
 					</tr>
 				</tfoot>
 			</table>
+			<!-- Calendar Grid -->
+			<div class="calendar">
+				<div class="cal-header-row">
+					<div
+						v-for="h in ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun']"
+						:key="h"
+						class="cal-head"
+					>
+						{{ h }}
+					</div>
+				</div>
+				<div
+					v-for="(wk, wi) in calendarWeeks"
+					:key="wi"
+					class="cal-week"
+				>
+					<div
+						v-for="d in wk"
+						:key="d.date"
+						class="cal-day"
+						:class="{
+							out: !d.inMonth,
+							has: dayActivity[d.date],
+						}"
+						:title="d.date + (dayActivity[d.date] ? ' • ' + dayActivity[d.date].hours.toFixed(2) + 'h' : '')"
+					>
+						<span class="num">{{ d.date.slice(-2) }}</span>
+					</div>
+				</div>
+				<div class="cal-legend">
+					<span class="box has" /> Worked day
+					<span class="box" /> No work
+				</div>
+			</div>
 		</div>
 		<p v-else-if="!loadingSummary">
 			No data for month.
@@ -168,4 +240,18 @@ onMounted(() => {
 .actions { display:flex; gap:.75rem; align-items:center; }
 .table-wrapper { margin-top:1rem; overflow-x:auto; }
 table { min-width:420px; }
+/* Calendar styles */
+.calendar { margin-top:2rem; }
+.cal-header-row, .cal-week { display:flex; }
+.cal-head, .cal-day { width:2.25rem; height:2.25rem; display:flex; align-items:center; justify-content:center; font-size:.7rem; box-sizing:border-box; }
+.cal-head { font-weight:600; }
+.cal-day { border:1px solid #ddd; background:#f9f9f9; position:relative; transition:background .15s ease, color .15s ease; }
+.cal-day.out { opacity:.35; }
+.cal-day.has { background:#1d7f36; color:#fff; font-weight:600; }
+.cal-day.has.out { filter:brightness(.85); }
+.cal-day:hover { outline:2px solid #999; z-index:2; }
+.cal-day .num { font-size:.65rem; line-height:1; }
+.cal-legend { display:flex; gap:1.25rem; margin-top:.5rem; font-size:.75rem; align-items:center; flex-wrap:wrap; }
+.cal-legend .box { width:1rem; height:1rem; display:inline-block; border:1px solid #ccc; background:#f9f9f9; margin-right:.25rem; vertical-align:middle; }
+.cal-legend .box.has { background:#1d7f36; border-color:#1d7f36; }
 </style>
