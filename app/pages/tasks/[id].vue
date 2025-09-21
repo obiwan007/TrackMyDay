@@ -1,4 +1,6 @@
 <script lang="ts" setup>
+definePageMeta({ requiresAuth: true });
+
 const route = useRoute();
 const { data: task, error, status } = await useFetch(`/api/tasks/${route.params.id}`, {
 	lazy: true,
@@ -9,7 +11,7 @@ const { data: task, error, status } = await useFetch(`/api/tasks/${route.params.
 	<div>
 		<article
 			v-if="status === 'pending'"
-			aria-busy="true"
+			:aria-busy="true"
 		/>
 		<article
 			v-else-if="error"

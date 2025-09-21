@@ -1,6 +1,8 @@
 <script lang="ts" setup>
 import type { FetchError } from 'ofetch';
 
+definePageMeta({ requiresAuth: true });
+
 const errorMessage = ref('');
 const loading = ref(false);
 const taskName = ref('');
@@ -38,7 +40,7 @@ async function onSubmit() {
 	<div>
 		<article
 			v-if="loading"
-			aria-busy
+			:aria-busy="true"
 		/>
 		<article
 			v-else-if="errorMessage"
