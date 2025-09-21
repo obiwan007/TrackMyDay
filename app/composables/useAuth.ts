@@ -1,4 +1,6 @@
-import type { Ref } from 'vue';
+// import type { Ref } from 'vue';
+// Local lightweight Ref type to avoid module resolution issues during editing.
+type Ref<T> = { value: T };
 
 interface User {
 	id: number;
