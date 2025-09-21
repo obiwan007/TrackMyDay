@@ -12,13 +12,15 @@ async function onLogout() {
 	<nav class="container">
 		<NuxtLink :to="{ name: 'index' }">
 			<ul>
-				<li><strong>My Weight Tracker</strong></li>
+				<li><strong>My Time Tracker</strong></li>
 			</ul>
 		</NuxtLink>
 		<ul>
 			<li><a href="#">About</a></li>
 			<li><NuxtLink :to="{ name: 'create' }">Create</NuxtLink></li>
 			<template v-if="auth.user.value">
+				<li><NuxtLink :to="{ path: '/days' }">Days</NuxtLink></li>
+				<li><NuxtLink :to="{ path: '/summary' }">Summary</NuxtLink></li>
 				<li>{{ auth.user.value.email }}</li>
 				<li>
 					<button
